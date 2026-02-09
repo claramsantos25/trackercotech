@@ -1,18 +1,18 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+// const fs = require('fs'); // fs removido pois não funciona para escrita na Vercel
+// const path = require('path');
 
 const app = express();
-const PORT = 3000;
-const DB_FILE = path.join(__dirname, 'database.json');
+const PORT = process.env.PORT || 3000;
 
-// Habilita conexões do seu HTML local
+// Habilita conexões (CORS)
 app.use(cors());
 app.use(express.json());
 
-// --- DADOS INICIAIS (Caso o arquivo não exista) ---
-const initialData = [
+// --- DADOS EM MEMÓRIA (Vercel/Serverless) ---
+// Nota: Na Vercel, sem um banco de dados externo, esses dados resetam a cada novo deploy ou reinício da função.
+let posts = [
     { id: 'C01', date: '09/02', type: 'Carrossel', title: 'BBB 26: O Paredão que ninguém quer', status: 'Pendente', 
       script: 'Slides:\n1. Capa: BBB 26 - o Paredão que ninguém quer\n2. Ficar doente e ter que cruzar a fronteira\n3. Você é estudante no PY? Isso é bem real\n4. Cansaço + plantão + prova = imunidade baixa\n5. A solução: atendimento online 24h no bolso\n6. Sem perrengue. Sem burocracia.\n7. Quer o acesso? Chama na DM: SAUDE', 
       caption: 'Se no BBB o Paredão é tensão, na vida real é cruzar a fronteira doente. A Cotech PY lança plataforma pra estudantes. Comenta SAUDE.' },
@@ -36,20 +36,12 @@ const USERS = {
     'cotech': { pass: 'cotech0902', role: 'client' }
 };
 
-// --- FUNÇÕES AUXILIARES ---
-function readDB() {
-    if (!fs.existsSync(DB_FILE)) {
-        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
-        return initialData;
-    }
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
-}
-
-function saveDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
-
 // --- ROTAS DA API ---
+
+// Rota Raiz para Teste
+app.get('/', (req, res) => {
+    res.send('Servidor Cotech Online 🚀');
+});
 
 // 1. Login
 app.post('/api/login', (req, res) => {
@@ -65,9 +57,8 @@ app.post('/api/login', (req, res) => {
 
 // 2. Pegar Posts
 app.get('/api/posts', (req, res) => {
-    const data = readDB();
     // Ordenar naturalmente por ID (C01, C02...)
-    const sorted = data.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+    const sorted = [...posts].sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
     res.json(sorted);
 });
 
@@ -76,21 +67,25 @@ app.post('/api/posts/:id', (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     
-    let data = readDB();
-    const itemIndex = data.findIndex(p => p.id === id);
+    const itemIndex = posts.findIndex(p => p.id === id);
 
     if (itemIndex > -1) {
-        data[itemIndex].status = status;
-        saveDB(data);
-        res.json({ success: true, item: data[itemIndex] });
+        posts[itemIndex].status = status;
+        // Na Vercel, não salvamos em arquivo (fs) pois é efêmero/read-only.
+        // A alteração fica apenas na memória da execução atual.
+        res.json({ success: true, item: posts[itemIndex] });
         console.log(`[ATUALIZADO] Post ${id} mudou para ${status}`);
     } else {
         res.status(404).json({ success: false, message: 'Post não encontrado' });
     }
 });
 
-// Iniciar Servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor Cotech rodando em http://localhost:${PORT}`);
-    console.log(`📂 Os dados serão salvos em: ${DB_FILE}`);
-});
+// Iniciar Servidor (Apenas se rodar localmente, na Vercel o export resolve)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor Cotech rodando em http://localhost:${PORT}`);
+    });
+}
+
+// Necessário para Vercel
+module.exports = app;
