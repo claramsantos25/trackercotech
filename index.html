@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tracker Cotech PY - Local Server</title>
+    <title>Tracker Cotech PY - Vercel Client</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
@@ -63,6 +63,12 @@
             color: #fff;
             border-radius: 6px;
             font-family: 'Inter', sans-serif;
+        }
+        
+        /* Highlight server input */
+        #server-url {
+            border-color: var(--accent);
+            background: rgba(124, 58, 237, 0.05);
         }
 
         .login-btn {
@@ -163,7 +169,7 @@
         .badge-Estático { background: rgba(16, 185, 129, 0.2); color: #34d399; }
         .badge-Institucional { background: rgba(124, 58, 237, 0.2); color: #a78bfa; }
         
-        /* Connection Status Indicator */
+        /* Connection Status */
         .connection-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 12px; border-radius: 20px; font-size: 12px; background: #121214; border: 1px solid #27272a; color: #666; display: flex; align-items: center; gap: 8px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
         .connected .dot { background: #10b981; box-shadow: 0 0 10px #10b981; }
@@ -176,10 +182,14 @@
     <!-- LOGIN -->
     <div id="login-screen">
         <div class="login-box">
-            <h2 style="margin-bottom: 20px; font-family: 'Space Grotesk';">Cotech PY<br><span style="font-size: 14px; color: #a1a1aa; font-weight: 400;">Server Local</span></h2>
+            <h2 style="margin-bottom: 20px; font-family: 'Space Grotesk';">Cotech PY<br><span style="font-size: 14px; color: #a1a1aa; font-weight: 400;">Acesso Remoto</span></h2>
+            
+            <div style="text-align: left; width: 100%; margin-bottom: 5px; font-size: 12px; color: #a1a1aa;">URL do Servidor Vercel</div>
+            <input type="text" id="server-url" class="login-input" placeholder="https://seu-projeto.vercel.app" value="http://localhost:3000">
+            
             <input type="text" id="username" class="login-input" placeholder="Usuário">
             <input type="password" id="password" class="login-input" placeholder="Senha">
-            <div id="login-error" class="login-error">Credenciais inválidas.</div>
+            <div id="login-error" class="login-error"></div>
             <button class="login-btn" onclick="attemptLogin()">Entrar</button>
         </div>
     </div>
@@ -191,7 +201,11 @@
                 <div>
                     <h4 style="margin:0; color: #a1a1aa; font-weight:400; font-size: 14px;">FEVEREIRO 2026</h4>
                     <h1>Tracker de Conteúdo Digital</h1>
-                    <p style="font-size: 12px; color: #52525b; margin-top: 5px;">Logado como: <span id="user-role-display" style="color: var(--accent); font-weight: 700;">...</span></p>
+                    <p style="font-size: 12px; color: #52525b; margin-top: 5px;">
+                        Logado como: <span id="user-role-display" style="color: var(--accent); font-weight: 700;">...</span>
+                        <span style="margin-left: 10px; color: #3f3f46;">|</span>
+                        <span id="server-display" style="margin-left: 10px; color: #a1a1aa; font-family: monospace;"></span>
+                    </p>
                 </div>
                 <div style="text-align: right;">
                     <div style="font-family: 'Space Grotesk'; font-size: 32px; font-weight: 700; color: var(--success);" id="progress-text">0%</div>
@@ -220,7 +234,7 @@
         
         <div id="connection-indicator" class="connection-status">
             <div class="dot"></div>
-            <span id="connection-text">Desconectado do Servidor</span>
+            <span id="connection-text">Desconectado</span>
         </div>
     </div>
 
@@ -242,15 +256,24 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
+        let API_URL = ''; // Será definido pelo usuário no login
         let currentUser = null;
         let pollingInterval = null;
 
         // --- AUTH ---
         async function attemptLogin() {
+            const serverInput = document.getElementById('server-url').value.replace(/\/$/, ""); // Remove barra final se houver
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
             const errorDiv = document.getElementById('login-error');
+
+            if (!serverInput) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "Por favor, insira a URL do servidor (ex: https://meu-app.vercel.app)";
+                return;
+            }
+
+            API_URL = `${serverInput}/api`;
 
             try {
                 const response = await fetch(`${API_URL}/login`, {
@@ -259,24 +282,34 @@
                     body: JSON.stringify({ username: u, password: p })
                 });
                 
+                // Verifica se a resposta é JSON válido
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("O servidor não retornou JSON. URL correta?");
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
                     currentUser = { name: u, role: data.role };
+                    
+                    // UI Updates
                     document.getElementById('login-screen').style.display = 'none';
                     document.getElementById('dashboard').style.display = 'block';
                     document.getElementById('user-role-display').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Cliente (Cotech)';
+                    document.getElementById('server-display').textContent = serverInput;
                     
                     loadData();
-                    // Como não é websocket, fazemos polling (consulta) a cada 2 segundos para manter atualizado
-                    pollingInterval = setInterval(loadData, 2000);
+                    // Polling a cada 5s para economizar recursos na Vercel
+                    pollingInterval = setInterval(loadData, 5000);
                 } else {
                     errorDiv.style.display = 'block';
                     errorDiv.innerText = data.message;
                 }
             } catch (err) {
+                console.error(err);
                 errorDiv.style.display = 'block';
-                errorDiv.innerText = "Erro ao conectar com o servidor. Verifique se o 'node server.js' está rodando.";
+                errorDiv.innerHTML = `Erro de conexão.<br>1. Verifique se a URL está correta.<br>2. Se for local, use http://localhost:3000`;
             }
         }
 
@@ -300,7 +333,7 @@
             const text = document.getElementById('connection-text');
             if (isOnline) {
                 el.classList.add('connected');
-                text.innerText = "Conectado ao Servidor Local";
+                text.innerText = "Conectado";
             } else {
                 el.classList.remove('connected');
                 text.innerText = "Desconectado (Tentando reconectar...)";
@@ -310,15 +343,8 @@
         // --- RENDER LOGIC ---
         function renderTable(items) {
             const tbody = document.getElementById('table-body');
-            // Salvamos a posição do scroll ou foco se necessário, mas para simplicidade vamos redesenhar
-            // Nota: Redesenhar tudo a cada 2s pode fechar selects abertos. 
-            // Melhoria: Só redesenhar se houver mudança ou manipular o DOM.
-            // Para este exemplo simples, vamos redesenhar, mas cuidado ao usar selects.
             
-            // Simples diff check para evitar "piscar" ou fechar menus
-            const currentHTML = tbody.innerHTML;
-            
-            // Build new HTML string first
+            // Build new HTML string
             let newHTML = '';
             let publishedCount = 0;
 
@@ -367,9 +393,7 @@
                 `;
             });
 
-            // Só atualiza o DOM se houver mudança drástica nos dados para evitar fechar o select enquanto o usuário clica
-            // Uma solução ideal seria atualizar linha a linha, mas para manter o código leve:
-            // Pausamos o refresh se o usuário estiver com o mouse sobre a tabela (interagindo)
+            // Evita redesenhar se o usuário estiver interagindo (hover)
             const isHovering = tbody.matches(':hover');
             if (!isHovering || tbody.innerHTML.trim() === "") {
                  tbody.innerHTML = newHTML;
@@ -387,7 +411,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
                 });
-                // Recarrega imediatamente para confirmar
                 loadData();
             } catch (e) {
                 console.error("Erro ao atualizar", e);
@@ -417,7 +440,6 @@
             }
         }
         
-        // Expose functions globally for HTML events
         window.attemptLogin = attemptLogin;
         window.updateStatus = updateStatus;
     </script>
