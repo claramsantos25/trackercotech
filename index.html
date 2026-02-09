@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracker Cotech PY - Local Server</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-body: #050505;
+            --bg-card: #121214;
+            --border: #27272a;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* LOGIN SCREEN */
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .login-box {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(124, 58, 237, 0.2);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #000;
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+        }
+
+        .login-error { color: var(--error); font-size: 13px; margin-top: 10px; display: none; }
+
+        /* DASHBOARD */
+        #dashboard { display: none; padding: 40px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            margin: 0;
+            background: linear-gradient(to right, #fff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* TABLE */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th {
+            background: #18181b; color: var(--text-secondary);
+            font-weight: 600; text-align: left; padding: 16px;
+            font-size: 12px; text-transform: uppercase; border-bottom: 1px solid var(--border);
+        }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+
+        /* STATUS BADGES & SELECTS */
+        select.status-select {
+            background: #000; border: 1px solid var(--border); color: #fff;
+            padding: 6px 10px; border-radius: 6px; width: 100%;
+            font-size: 12px; cursor: pointer;
+        }
+        .status-Pendente { color: #a1a1aa; border-color: #3f3f46; }
+        .status-Produzido { color: #fbbf24; border-color: #b45309; background: rgba(251, 191, 36, 0.1) !important; }
+        .status-Aprovado { color: #34d399; border-color: #059669; background: rgba(52, 211, 153, 0.1) !important; }
+        .status-Agendado { color: #60a5fa; border-color: #2563eb; background: rgba(96, 165, 250, 0.1) !important; }
+        .status-Publicado { color: #fff; border-color: #7c3aed; background: rgba(124, 58, 237, 0.4) !important; }
+
+        /* MODAL */
+        #details-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000; backdrop-filter: blur(5px);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: #18181b; width: 600px; max-width: 90%; max-height: 80vh;
+            overflow-y: auto; border-radius: 12px; border: 1px solid var(--border);
+            padding: 30px; position: relative;
+        }
+        .close-modal {
+            position: absolute; top: 20px; right: 20px; background: none; border: none;
+            color: var(--text-secondary); font-size: 20px; cursor: pointer;
+        }
+        .modal-label { color: var(--accent); font-size: 12px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; display: block; }
+        .modal-text { background: #000; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; line-height: 1.6; color: #d1d5db; white-space: pre-wrap; font-size: 14px;}
+
+        /* UTILS */
+        .btn-icon { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .btn-icon:hover { color: #fff; border-color: var(--accent); background: rgba(124,58,237,0.1); }
+        .hidden { display: none; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .badge-Carrossel { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .badge-Reels { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+        .badge-Stories { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .badge-Estático { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .badge-Institucional { background: rgba(124, 58, 237, 0.2); color: #a78bfa; }
+        
+        /* Connection Status Indicator */
+        .connection-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 12px; border-radius: 20px; font-size: 12px; background: #121214; border: 1px solid #27272a; color: #666; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .connected .dot { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        .connected { color: #fff; border-color: #10b981; }
+
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 style="margin-bottom: 20px; font-family: 'Space Grotesk';">Cotech PY<br><span style="font-size: 14px; color: #a1a1aa; font-weight: 400;">Server Local</span></h2>
+            <input type="text" id="username" class="login-input" placeholder="Usuário">
+            <input type="password" id="password" class="login-input" placeholder="Senha">
+            <div id="login-error" class="login-error">Credenciais inválidas.</div>
+            <button class="login-btn" onclick="attemptLogin()">Entrar</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="dashboard">
+        <div class="container">
+            <header>
+                <div>
+                    <h4 style="margin:0; color: #a1a1aa; font-weight:400; font-size: 14px;">FEVEREIRO 2026</h4>
+                    <h1>Tracker de Conteúdo Digital</h1>
+                    <p style="font-size: 12px; color: #52525b; margin-top: 5px;">Logado como: <span id="user-role-display" style="color: var(--accent); font-weight: 700;">...</span></p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-family: 'Space Grotesk'; font-size: 32px; font-weight: 700; color: var(--success);" id="progress-text">0%</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">Publicado</div>
+                </div>
+            </header>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="60">#</th>
+                            <th width="80">Data</th>
+                            <th width="100">Formato</th>
+                            <th>Tema / Título</th>
+                            <th width="140">Status</th>
+                            <th width="60" style="text-align: center;">Det.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="connection-indicator" class="connection-status">
+            <div class="dot"></div>
+            <span id="connection-text">Desconectado do Servidor</span>
+        </div>
+    </div>
+
+    <!-- DETAILS MODAL -->
+    <div id="details-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h2 id="modal-title" style="font-family: 'Space Grotesk'; margin-top: 0;">Título do Post</h2>
+            
+            <label class="modal-label">Status Atual</label>
+            <div id="modal-status" style="margin-bottom: 20px; display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; background: #333;">Pendente</div>
+
+            <label class="modal-label">Roteiro / Conteúdo</label>
+            <div class="modal-text" id="modal-script">Carregando...</div>
+
+            <label class="modal-label">Legenda Sugerida</label>
+            <div class="modal-text" id="modal-caption">Carregando...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let currentUser = null;
+        let pollingInterval = null;
+
+        // --- AUTH ---
+        async function attemptLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUser = { name: u, role: data.role };
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    document.getElementById('user-role-display').textContent = currentUser.role === 'admin' ? 'Administrador' : 'Cliente (Cotech)';
+                    
+                    loadData();
+                    // Como não é websocket, fazemos polling (consulta) a cada 2 segundos para manter atualizado
+                    pollingInterval = setInterval(loadData, 2000);
+                } else {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerText = data.message;
+                }
+            } catch (err) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "Erro ao conectar com o servidor. Verifique se o 'node server.js' está rodando.";
+            }
+        }
+
+        // --- DATA FETCHING ---
+        async function loadData() {
+            try {
+                const response = await fetch(`${API_URL}/posts`);
+                if(!response.ok) throw new Error("Falha na API");
+                const items = await response.json();
+                
+                renderTable(items);
+                updateConnectionStatus(true);
+            } catch (err) {
+                console.error("Erro ao carregar dados:", err);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function updateConnectionStatus(isOnline) {
+            const el = document.getElementById('connection-indicator');
+            const text = document.getElementById('connection-text');
+            if (isOnline) {
+                el.classList.add('connected');
+                text.innerText = "Conectado ao Servidor Local";
+            } else {
+                el.classList.remove('connected');
+                text.innerText = "Desconectado (Tentando reconectar...)";
+            }
+        }
+
+        // --- RENDER LOGIC ---
+        function renderTable(items) {
+            const tbody = document.getElementById('table-body');
+            // Salvamos a posição do scroll ou foco se necessário, mas para simplicidade vamos redesenhar
+            // Nota: Redesenhar tudo a cada 2s pode fechar selects abertos. 
+            // Melhoria: Só redesenhar se houver mudança ou manipular o DOM.
+            // Para este exemplo simples, vamos redesenhar, mas cuidado ao usar selects.
+            
+            // Simples diff check para evitar "piscar" ou fechar menus
+            const currentHTML = tbody.innerHTML;
+            
+            // Build new HTML string first
+            let newHTML = '';
+            let publishedCount = 0;
+
+            items.forEach(item => {
+                if(item.status === 'Publicado') publishedCount++;
+                
+                let statusControl = '';
+                const statusClass = `status-${item.status}`;
+                
+                if (currentUser.role === 'admin') {
+                    statusControl = `
+                        <select class="status-select ${statusClass}" onchange="updateStatus('${item.id}', this.value)">
+                            <option value="Pendente" ${item.status === 'Pendente'?'selected':''}>Pendente</option>
+                            <option value="Produzido" ${item.status === 'Produzido'?'selected':''}>Produzido</option>
+                            <option value="Aprovado" ${item.status === 'Aprovado'?'selected':''}>Aprovado</option>
+                            <option value="Agendado" ${item.status === 'Agendado'?'selected':''}>Agendado</option>
+                            <option value="Publicado" ${item.status === 'Publicado'?'selected':''}>Publicado</option>
+                        </select>
+                    `;
+                } else {
+                    if (item.status === 'Agendado' || item.status === 'Publicado') {
+                         statusControl = `<div class="status-select ${statusClass}" style="text-align:center; cursor: default;">${item.status}</div>`;
+                    } else {
+                        statusControl = `
+                            <select class="status-select ${statusClass}" onchange="updateStatus('${item.id}', this.value)">
+                                <option value="Pendente" ${item.status === 'Pendente'?'selected':''}>Pendente (Em revisão)</option>
+                                <option value="Aprovado" ${item.status === 'Aprovado'?'selected':''}>✅ APROVAR</option>
+                            </select>
+                        `;
+                    }
+                }
+
+                newHTML += `
+                    <tr>
+                        <td style="color: #52525b; font-family:'Space Grotesk';">${item.id}</td>
+                        <td>${item.date}</td>
+                        <td><span class="badge badge-${item.type}">${item.type}</span></td>
+                        <td style="font-weight: 500;">${item.title}</td>
+                        <td>${statusControl}</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick='openModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Só atualiza o DOM se houver mudança drástica nos dados para evitar fechar o select enquanto o usuário clica
+            // Uma solução ideal seria atualizar linha a linha, mas para manter o código leve:
+            // Pausamos o refresh se o usuário estiver com o mouse sobre a tabela (interagindo)
+            const isHovering = tbody.matches(':hover');
+            if (!isHovering || tbody.innerHTML.trim() === "") {
+                 tbody.innerHTML = newHTML;
+            }
+
+            const pct = items.length > 0 ? Math.round((publishedCount / items.length) * 100) : 0;
+            document.getElementById('progress-text').innerText = pct + '%';
+        }
+
+        // --- ACTIONS ---
+        async function updateStatus(id, newStatus) {
+            try {
+                await fetch(`${API_URL}/posts/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                // Recarrega imediatamente para confirmar
+                loadData();
+            } catch (e) {
+                console.error("Erro ao atualizar", e);
+                alert("Erro de conexão ao salvar.");
+            }
+        }
+
+        window.openModal = function(item) {
+            document.getElementById('modal-title').innerText = item.title;
+            document.getElementById('modal-status').innerText = item.status;
+            document.getElementById('modal-status').className = `status-${item.status}`;
+            
+            document.getElementById('modal-script').innerText = item.script || "Roteiro não disponível.";
+            document.getElementById('modal-caption').innerText = item.caption || "Legenda em desenvolvimento.";
+            
+            document.getElementById('details-modal').style.display = 'flex';
+        }
+
+        window.closeModal = function() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('details-modal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+        
+        // Expose functions globally for HTML events
+        window.attemptLogin = attemptLogin;
+        window.updateStatus = updateStatus;
+    </script>
+</body>
+</html>
